@@ -1,0 +1,66 @@
+# ==============================================================================
+# .gitignore for R project
+# ==============================================================================
+
+# R History and Environment
+.Rhistory
+.RData
+.Rapp.history
+
+# Session Data files
+.RData
+.rds
+
+# User-specific files
+.Ruserdata
+.Rproj.user/
+
+# Output files (can be regenerated)
+output/
+*.html
+*.png
+*.jpg
+*.pdf
+
+# Data files (large, should be stored elsewhere)
+data/raw/*.sav
+data/raw/**/*.sav
+data/processed/*.rds
+
+# Temporary files
+*.log
+*.tmp
+~$*.docx
+~$*.xlsx
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE specific files
+.vscode/
+.idea/
+
+# R package development
+*.tar.gz
+*.zip
+/vignettes/*.html
+/vignettes/*.pdf
+
+# renv (uncomment if using renv)
+# renv/library/
+# renv/local/
+# renv/staging/
+
+# Keep directory structure but ignore contents
+# (add .gitkeep files in empty directories you want to track)
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!output/figures/.gitkeep
+!output/tables/.gitkeep
+!output/reports/.gitkeep
