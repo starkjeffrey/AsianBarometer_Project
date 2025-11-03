@@ -72,23 +72,26 @@ question_map <- list(
 
 #' Reverse code a 5-point scale
 #' @param x Numeric vector with values 1-5
-#' @return Reversed vector where 1->5, 2->4, 3->3, 4->2, 5->1
+#' @return Reversed vector where 1->5, 2->4, 3->3, 4->2, 5->1. Invalid values become NA.
 reverse_5point <- function(x) {
-  6 - x
+  # Only reverse valid values 1-5, convert invalid values (0, 97, 98, 99, etc.) to NA
+  ifelse(x >= 1 & x <= 5, 6 - x, NA)
 }
 
 #' Reverse code a 4-point scale
 #' @param x Numeric vector with values 1-4
-#' @return Reversed vector where 1->4, 2->3, 3->2, 4->1
+#' @return Reversed vector where 1->4, 2->3, 3->2, 4->1. Invalid values become NA.
 reverse_4point <- function(x) {
-  5 - x
+  # Only reverse valid values 1-4, convert invalid values (0, 97, 98, 99, etc.) to NA
+  ifelse(x >= 1 & x <= 4, 5 - x, NA)
 }
 
 #' Reverse code a 6-point scale
 #' @param x Numeric vector with values 1-6
-#' @return Reversed vector where 1->6, 2->5, etc.
+#' @return Reversed vector where 1->6, 2->5, etc. Invalid values become NA.
 reverse_6point <- function(x) {
-  7 - x
+  # Only reverse valid values 1-6, convert invalid values (0, 97, 98, 99, etc.) to NA
+  ifelse(x >= 1 & x <= 6, 7 - x, NA)
 }
 
 
