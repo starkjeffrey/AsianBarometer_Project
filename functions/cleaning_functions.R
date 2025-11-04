@@ -3,15 +3,103 @@
 # Reusable helper functions for data cleaning
 # ==============================================================================
 
-#' Clean survey variable by setting missing value codes to NA
+# Master list of all labels to be converted to NA
+# These are SPSS value label texts that indicate missing/invalid responses
+# Advantage: numeric codes vary by question, but label text is consistent
+na_labels_list <- c(
+  # Generic missing indicators
+  "Missing",                          # Common across waves
+  "NA",
+  "N/A",
+  "Not applicable",
+
+  # Don't know / Can't answer
+  "don't understand",
+  "Don't understand",
+  "Do not understand the question",
+  "don't understand the question",
+  "Don't understand the question",
+  "DK",
+  "Don't know",
+  "Can't choose",
+  "Cannot choose",
+  "Can't determine",
+
+  # Refusal to answer
+  "Refused",
+  "Refuse",
+  "Decline to answer",
+  "No answer",
+  "No more answer",
+  "No further reply",
+
+  # Question-specific NA indicators found so far
+  "Not a member of any organization or group",  # Wave2, Q20
+  "Unclassifiable / inconceivable"              # Wave 2, Q100
+
+  # Add new label patterns as you discover them during wave exploration
+)
+
+#' Clean haven_labelled variable by converting label-based NA values
+#'
+#' Converts values to NA based on their SPSS value labels while preserving
+#' the haven_labelled class and all label attributes. This is the CORRECT
+#' way to handle missing values in SPSS data where numeric codes vary by question.
+#'
+#' @param x A haven_labelled vector
+#' @param na_labels Character vector of value labels to treat as NA
+#' @return haven_labelled vector with specified values replaced by NA
+#' @examples
+#' # Clean a variable using the standard NA label list
+#' clean_q1 <- clean_variable_by_label(data$q1, na_labels_list)
+#'
+#' # Add custom NA labels for specific questions
+#' clean_q20 <- clean_variable_by_label(data$q20,
+#'                                       c(na_labels_list, "Not a member"))
+clean_variable_by_label <- function(x, na_labels = na_labels_list) {
+  if (!haven::is.labelled(x)) {
+    warning("Variable is not haven_labelled, returning unchanged")
+    return(x)
+  }
+
+  # Get value labels
+  val_labs <- attr(x, "labels")
+  if (is.null(val_labs) || length(val_labs) == 0) {
+    warning("No value labels found")
+    return(x)
+  }
+
+  # Find label names (not values) that match our NA patterns
+  lab_names <- names(val_labs)
+  matching <- lab_names %in% na_labels
+
+  # Get the VALUES corresponding to those labels
+  na_values_to_replace <- val_labs[matching]
+
+  if (length(na_values_to_replace) == 0) {
+    return(x)  # No matches, return unchanged
+  }
+
+  # Replace each value with NA using base R subsetting (preserves labelled class)
+  for (val in na_values_to_replace) {
+    x[x == val] <- NA
+  }
+
+  x
+}
+
+#' Clean survey variable by setting missing value codes to NA (numeric approach)
 #'
 #' @param x A numeric vector
-#' @param missing_codes Numeric vector of codes to treat as missing (default: c(0, 97, 98, 99))
+#' @param missing_codes Codes to treat as missing
 #' @return Vector with missing codes replaced by NA
 #' @examples
-#' clean_variable(c(1, 2, 97, 98, 3, 0))
-clean_variable <- function(x, missing_codes = c(0, 97, 98, 99)) {
-  ifelse(x %in% missing_codes, NA, x)
+#' clean_variable(c(-1))
+clean_variable_dplyr <- function(x, missing_codes = c(-1)) {
+  for (code in missing_codes) {
+    x <- na_if(x, code)
+  }
+  x
 }
 
 #' Apply cleaning function to multiple columns

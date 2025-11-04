@@ -1,0 +1,33 @@
+concept,domain,description,w2_var,w3_var,w4_var,w5_var,w6_var,scale_type,direction,notes
+trust_executive,trust,Trust in executive/president,q7,q7,q7,q7,q7,mixed,higher_more,"W2/W4/W6=4pt, W3/W5=6pt. W4 reversed in raw"
+trust_legislature,trust,Trust in legislature/parliament,q8,q8,q8,q8,q8,mixed,higher_more,"W2/W4/W6=4pt, W3/W5=6pt. W4 reversed in raw"
+trust_courts,trust,Trust in courts/judicial system,q9,q9,q9,q9,q9,mixed,higher_more,"W2/W4/W6=4pt, W3/W5=6pt. W4 reversed in raw"
+trust_parties,trust,Trust in political parties,q10,q10,q10,q10,q10,mixed,higher_more,"W2/W4/W6=4pt, W3/W5=6pt. W4 reversed in raw"
+trust_national_gov,trust,Trust in national government,q11,q11,q11,q11,q11,mixed,higher_more,"W2/W4/W6=4pt, W3/W5=6pt. W4 reversed in raw"
+trust_civil_service,trust,Trust in civil service,q12,q12,q12,q12,q12,mixed,higher_more,"W2/W4/W6=4pt, W3/W5=6pt. W4 reversed in raw"
+trust_military,trust,Trust in military,q13,q13,q13,q13,q13,mixed,higher_more,"W2/W4/W6=4pt, W3/W5=6pt. W4 reversed in raw"
+trust_police,trust,Trust in police,q14,q14,q14,q14,q14,mixed,higher_more,"W2/W4/W6=4pt, W3/W5=6pt. W4 reversed in raw"
+trust_local_gov,trust,Trust in local government,q15,q15,q15,q15,q15,mixed,higher_more,"W2/W4/W6=4pt, W3/W5=6pt. W4 reversed in raw"
+econ_country_current,economic,Current country economic condition,q1,q1,q1,q1,q1,5-point,higher_better,W4 reversed in raw (1=good to 1=bad)
+econ_family_current,economic,Current family economic condition,q2,q2,q2,q2,q2,5-point,higher_better,W4 reversed in raw
+econ_country_past,economic,Country economic vs 1 year ago,q3,q3,q3,q3,q3,5-point,higher_better,W4 reversed in raw
+econ_family_past,economic,Family economic vs 1 year ago,q4,q4,q4,q4,q4,5-point,higher_better,W4 reversed in raw
+econ_country_future,economic,Country economic in 1 year,q5,q5,q5,q5,q5,5-point,higher_better,W4 reversed in raw
+econ_family_future,economic,Family economic in 1 year,q6,q6,q6,q6,q6,5-point,higher_better,W4 reversed in raw
+satisfaction_democracy,democracy,Satisfaction with democracy,q93,q89,q92,q90,q92,4-point,higher_more,Variable numbers differ across waves
+level_democracy,democracy,Level of democracy in country,q94,q90,q93,q91,q93,varies,higher_more,Check exact scale per wave
+democracy_preferable,democracy,Democracy is preferable,q121,q132,q125,q124,q125,varies,higher_more,Variable numbers differ across waves
+interest_politics,politics,Interest in politics,q92,q88,q91,q89,q91,4-point,higher_more,Variable numbers differ
+follow_news,politics,How often follow news,q95,q91,q94,q92,q94,varies,higher_more,Check scale per wave
+covid_infection,covid,Personal/family COVID infection,,,,,q138,binary,yes_no,Wave 6 only - 1=Yes 2=No
+covid_economic_impact,covid,COVID impact on family livelihood,,,,,q140,4-point,higher_worse,Wave 6 only - 1=very serious to 4=not much impact
+covid_trust_info,covid,Trust in government COVID information,,,,,q141,4-point,higher_more,Wave 6 only - 1=great deal to 4=no trust
+covid_gov_handling,covid,Government pandemic handling evaluation,,,,,q142,4-point,higher_better,Wave 6 only - 1=very well to 4=very badly
+covid_vaccination,covid,COVID vaccination status,,,,,q144,categorical,yes_no,Wave 6 only - multiple response options
+covid_vaccine_reasons,covid,Reasons for not vaccinating,,,,,q145,categorical,none,Wave 6 only - skip pattern from q144
+covid_emergency_powers,covid,Justify emergency powers for health crisis,,,,,q172a,4-point,higher_justified,Wave 6 only - 1=very justified to 4=not at all
+covid_postpone_elections,covid,Justify postponing elections for health crisis,,,,,q143a,3-point,higher_justified,Wave 6 only - 1=always 2=sometimes 3=never
+covid_limit_speech,covid,Justify limiting freedom of speech/assembly,,,,,q143b,3-point,higher_justified,Wave 6 only - 1=always 2=sometimes 3=never
+covid_censor_media,covid,Justify censoring the media,,,,,q143c,3-point,higher_justified,Wave 6 only - 1=always 2=sometimes 3=never
+covid_track_citizens,covid,Justify tracking citizens' locations,,,,,q143d,3-point,higher_justified,Wave 6 only - 1=always 2=sometimes 3=never
+covid_lockdown,covid,Justify long-term lockdown,,,,,q143e,3-point,higher_justified,Wave 6 only - 1=always 2=sometimes 3=never

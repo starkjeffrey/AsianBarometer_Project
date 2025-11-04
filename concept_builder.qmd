@@ -1,0 +1,254 @@
+---
+title: "Concept Builder"
+subtitle: "Build and validate concept mappings across waves"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    code-fold: show
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r setup}
+library(haven)
+library(dplyr)
+library(here)
+library(DT)
+library(ggplot2)
+
+source(here("functions/cleaning_functions.R"))
+source(here("functions/concept_functions.R"))
+```
+
+## Current Concept Mappings
+
+```{r view-mappings}
+mappings <- load_concept_mappings()
+
+datatable(
+  mappings,
+  filter = "top",
+  options = list(
+    pageLength = 20,
+    scrollX = TRUE,
+    columnDefs = list(list(width = '300px', targets = 2))
+  ),
+  caption = "Current concept mappings (edit docs/concept_mappings.csv to modify)"
+)
+```
+
+## Mapping Summary
+
+```{r mapping-summary}
+# Count concepts by domain
+domain_summary <- mappings %>%
+  group_by(domain) %>%
+  summarise(n_concepts = n(), .groups = "drop")
+
+cat("Concepts by domain:\n")
+print(domain_summary)
+
+# Check availability by wave
+wave_cols <- c("w2_var", "w3_var", "w4_var", "w5_var", "w6_var")
+wave_availability <- sapply(wave_cols, function(col) {
+  sum(!is.na(mappings[[col]]) & mappings[[col]] != "")
+})
+
+cat("\n\nConcepts available by wave:\n")
+print(wave_availability)
+```
+
+## Cross-Wave Validation
+
+Validate that mapped variables actually exist in the data:
+
+```{r validation, eval=FALSE}
+# Load all waves (adjust paths as needed)
+w2 <- read_sav(here("data/raw/Wave2_20250609.sav"))
+w3 <- read_sav(here("data/raw/ABS3 merge20250609.sav"))
+w4 <- read_sav(here("data/raw/W4_v15_merged20250609_release.sav"))
+w5 <- read_sav(here("data/raw/20230505_W5_merge_15.sav"))
+w6 <- read_sav(here("data/raw/W6_Cambodia_Release_20240819.sav"))
+
+# Filter for Cambodia
+w2 <- w2 %>% filter(country == 12)
+w3 <- w3 %>% filter(country == 12)
+w4 <- w4 %>% filter(country == 12)
+w5 <- w5 %>% filter(COUNTRY == 12)
+# w6 is Cambodia-only
+
+waves <- list(W2 = w2, W3 = w3, W4 = w4, W5 = w5, W6 = w6)
+
+# Validate each concept
+validation_results <- list()
+
+for (i in 1:nrow(mappings)) {
+  concept <- mappings$concept[i]
+  results <- c()
+
+  for (wave_name in names(waves)) {
+    is_valid <- validate_concept(waves[[wave_name]], concept, wave_name, mappings)
+    results <- c(results, is_valid)
+  }
+
+  validation_results[[concept]] <- results
+}
+
+# Convert to data frame
+validation_df <- as.data.frame(validation_results) %>%
+  t() %>%
+  as.data.frame()
+colnames(validation_df) <- names(waves)
+validation_df$concept <- rownames(validation_df)
+
+datatable(validation_df, caption = "Validation results (TRUE = variable exists)")
+```
+
+## Distribution Comparison
+
+Compare distributions of a concept across waves:
+
+```{r distribution-comparison, eval=FALSE}
+# Example: Compare trust_executive across waves
+concept_to_compare <- "trust_executive"
+
+concept_all_waves <- get_concept_all_waves(
+  concept_to_compare,
+  waves,
+  clean = TRUE
+)
+
+if (!is.null(concept_all_waves)) {
+  # Summary statistics
+  summary_stats <- concept_all_waves %>%
+    group_by(wave) %>%
+    summarise(
+      n = n(),
+      n_valid = sum(!is.na(!!sym(concept_to_compare))),
+      mean = mean(!!sym(concept_to_compare), na.rm = TRUE),
+      sd = sd(!!sym(concept_to_compare), na.rm = TRUE),
+      .groups = "drop"
+    )
+
+  cat("Summary statistics for", concept_to_compare, ":\n")
+  print(summary_stats)
+
+  # Distribution plot
+  ggplot(concept_all_waves, aes(x = as.factor(!!sym(concept_to_compare)), fill = wave)) +
+    geom_bar(position = "dodge") +
+    facet_wrap(~wave, scales = "free_y") +
+    theme_minimal() +
+    labs(
+      title = paste("Distribution of", concept_to_compare, "across waves"),
+      x = "Response value (higher = more trust)",
+      y = "Count"
+    ) +
+    theme(legend.position = "none")
+}
+```
+
+## Add New Concept
+
+Template for adding a new concept to the mapping:
+
+```{r new-concept-template}
+cat("To add a new concept, add a row to docs/concept_mappings.csv:\n\n")
+
+cat("concept,domain,description,w2_var,w3_var,w4_var,w5_var,w6_var,scale_type,direction,notes\n")
+cat("new_concept_name,domain_name,\"Description text\",q10,q12,q11,q13,q14,4-point,higher_more,\"Any notes\"\n\n")
+
+cat("Steps:\n")
+cat("1. Choose a descriptive concept name (lowercase, underscores)\n")
+cat("2. Assign to domain: trust, economic, democracy, politics, or create new\n")
+cat("3. Write clear description\n")
+cat("4. Map variable names for each wave (or leave blank if not in that wave)\n")
+cat("5. Document scale type and direction\n")
+cat("6. Add notes about comparability issues\n")
+```
+
+## Concept Extraction Examples
+
+### Example 1: Extract single concept from one wave
+
+```{r example-1, eval=FALSE}
+# Extract trust in executive from Wave 3
+trust_exec_w3 <- get_concept(w3, "trust_executive", "W3", clean = TRUE)
+
+cat("Trust in executive (W3):\n")
+print(table(trust_exec_w3, useNA = "ifany"))
+```
+
+### Example 2: Extract multiple concepts from one wave
+
+```{r example-2, eval=FALSE}
+# Extract all trust concepts from Wave 3
+trust_concepts <- mappings %>%
+  filter(domain == "trust") %>%
+  pull(concept)
+
+trust_data_w3 <- extract_concepts(w3, trust_concepts, "W3", clean = TRUE)
+
+cat("Trust concepts extracted from W3:\n")
+cat("Dimensions:", nrow(trust_data_w3), "rows x", ncol(trust_data_w3), "concepts\n")
+```
+
+### Example 3: Extract concept from all waves
+
+```{r example-3, eval=FALSE}
+# Get trust_executive from all waves
+trust_exec_all <- get_concept_all_waves("trust_executive", waves, clean = TRUE)
+
+cat("Trust in executive across all waves:\n")
+print(trust_exec_all %>%
+  group_by(wave) %>%
+  summarise(n = n(), mean = mean(trust_executive, na.rm = TRUE)))
+```
+
+### Example 4: Extract multiple concepts from all waves
+
+```{r example-4, eval=FALSE}
+# Extract economic concepts from all waves
+econ_concepts <- mappings %>%
+  filter(domain == "economic") %>%
+  pull(concept)
+
+# Get from all waves
+econ_all_waves <- lapply(econ_concepts, function(concept) {
+  get_concept_all_waves(concept, waves, clean = TRUE)
+})
+names(econ_all_waves) <- econ_concepts
+
+cat("Economic concepts extracted from all waves\n")
+```
+
+## Workflow Guide
+
+### Discovery Phase
+1. Use `wave_explorer_template.qmd` for each wave
+2. Identify variables that measure similar concepts
+3. Note value label patterns for NA values
+
+### Mapping Phase
+1. Edit `docs/concept_mappings.csv` to add new concepts
+2. Map variables to concepts for each wave
+3. Document scale types and directionality
+
+### Validation Phase
+1. Run validation checks (above) to confirm variables exist
+2. Compare distributions across waves
+3. Document any comparability issues
+
+### Extraction Phase
+1. Use `get_concept()` and `get_concept_all_waves()` in analysis
+2. Apply label-based cleaning automatically
+3. Build cross-wave datasets for analysis
+
+## Next Steps
+
+1. **Explore each wave** with `wave_explorer_template.qmd`
+2. **Build mappings** by editing `concept_mappings.csv`
+3. **Validate** using this document
+4. **Extract and analyze** using concept functions in your Quarto analyses

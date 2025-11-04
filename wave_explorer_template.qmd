@@ -1,0 +1,294 @@
+---
+title: "Wave Explorer: Discover Variables and Concepts"
+subtitle: "Interactive tool for exploring Asian Barometer wave data"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    code-fold: true
+    df-print: paged
+execute:
+  echo: true
+  warning: false
+  message: false
+params:
+  wave: "W3"
+  wave_file: "data/raw/ABS3 merge20250609.sav"
+---
+
+```{r setup}
+library(haven)
+library(dplyr)
+library(tidyr)
+library(here)
+library(DT)
+library(ggplot2)
+
+# Load helper functions
+source(here("functions/cleaning_functions.R"))
+source(here("functions/concept_functions.R"))
+
+# Set wave parameters
+WAVE <- params$wave
+WAVE_FILE <- here(params$wave_file)
+```
+
+## Overview
+
+Exploring **`r WAVE`** to identify variables and map them to concepts.
+
+```{r load-data}
+# Load wave data
+wave_data <- read_sav(WAVE_FILE)
+
+cat("Wave:", WAVE, "\n")
+cat("Observations:", nrow(wave_data), "\n")
+cat("Variables:", ncol(wave_data), "\n")
+```
+
+## 1. Variable Browser
+
+Browse all variables with their labels and value labels:
+
+```{r variable-browser}
+# Create variable summary
+var_summary <- tibble(
+  variable = names(wave_data),
+  var_label = sapply(wave_data, function(x) {
+    label <- attr(x, "label")
+    if (is.null(label)) "" else label
+  }),
+  n_values = sapply(wave_data, function(x) length(unique(x[!is.na(x)]))),
+  has_labels = sapply(wave_data, haven::is.labelled),
+  n_missing = sapply(wave_data, function(x) sum(is.na(x)))
+)
+
+# Filter to survey questions (starting with q)
+q_vars <- var_summary %>%
+  filter(grepl("^q", variable, ignore.case = TRUE))
+
+# Display interactive table
+datatable(
+  q_vars,
+  filter = "top",
+  options = list(
+    pageLength = 20,
+    autoWidth = TRUE,
+    columnDefs = list(list(width = '400px', targets = 1))
+  ),
+  caption = paste("Survey variables in", WAVE)
+)
+```
+
+## 2. Concept Discovery
+
+### Trust Variables
+
+```{r trust-variables}
+# Find potential trust variables
+trust_vars <- var_summary %>%
+  filter(grepl("trust", var_label, ignore.case = TRUE))
+
+if (nrow(trust_vars) > 0) {
+  datatable(trust_vars,
+            options = list(pageLength = 15),
+            caption = "Variables mentioning 'trust'")
+} else {
+  cat("No variables with 'trust' in label found. Searching question numbers...\n")
+
+  # Trust questions typically q7-q19
+  trust_range <- var_summary %>%
+    filter(variable %in% paste0("q", 7:19))
+
+  datatable(trust_range,
+            options = list(pageLength = 15),
+            caption = "Variables q7-q19 (typical trust range)")
+}
+```
+
+### Economic Variables
+
+```{r economic-variables}
+# Find economic perception variables
+econ_vars <- var_summary %>%
+  filter(grepl("econom", var_label, ignore.case = TRUE))
+
+if (nrow(econ_vars) == 0) {
+  # Try q1-q6 (typical economic range)
+  econ_vars <- var_summary %>%
+    filter(variable %in% paste0("q", 1:6))
+}
+
+datatable(econ_vars,
+          options = list(pageLength = 10),
+          caption = "Economic perception variables")
+```
+
+### Democracy Variables
+
+```{r democracy-variables}
+# Find democracy-related variables
+dem_vars <- var_summary %>%
+  filter(grepl("democra|satisfaction", var_label, ignore.case = TRUE))
+
+datatable(dem_vars,
+          options = list(pageLength = 10),
+          caption = "Democracy-related variables")
+```
+
+## 3. Value Label Inspection
+
+### Check Specific Variable
+
+```{r inspect-variable}
+# Example: Inspect q1
+inspect_var <- "q1"
+
+if (inspect_var %in% names(wave_data)) {
+  cat("Variable:", inspect_var, "\n")
+  cat("Label:", attr(wave_data[[inspect_var]], "label"), "\n\n")
+
+  cat("Value Labels:\n")
+  val_labs <- attr(wave_data[[inspect_var]], "labels")
+  if (!is.null(val_labs)) {
+    print(val_labs)
+  } else {
+    cat("No value labels\n")
+  }
+
+  cat("\nValue Distribution:\n")
+  print(table(wave_data[[inspect_var]], useNA = "ifany"))
+}
+```
+
+## 4. NA Pattern Discovery
+
+Find all unique value labels that might indicate missing values:
+
+```{r na-patterns}
+# Extract all value labels from all variables
+all_value_labels <- wave_data %>%
+  select(starts_with("q")) %>%
+  lapply(function(x) {
+    if (haven::is.labelled(x)) {
+      names(attr(x, "labels"))
+    } else {
+      NULL
+    }
+  }) %>%
+  unlist() %>%
+  unique() %>%
+  sort()
+
+# Filter to potential NA patterns
+potential_na <- grep("missing|don't|can't|refuse|NA|decline|understand",
+                     all_value_labels, value = TRUE, ignore.case = TRUE)
+
+cat("Potential NA label patterns found in", WAVE, ":\n")
+cat(paste("-", potential_na), sep = "\n")
+
+cat("\n\nCompare with current na_labels_list:\n")
+cat(paste("-", na_labels_list), sep = "\n")
+
+cat("\n\nNew patterns to add:\n")
+new_patterns <- setdiff(potential_na, na_labels_list)
+if (length(new_patterns) > 0) {
+  cat(paste("-", new_patterns), sep = "\n")
+} else {
+  cat("None - all patterns already in na_labels_list\n")
+}
+```
+
+## 5. Concept Validation
+
+Check which concepts from the mapping are available in this wave:
+
+```{r concept-validation}
+# Load concept mappings
+mappings <- load_concept_mappings()
+
+# Get concepts mapped for this wave
+wave_concepts <- list_wave_concepts(WAVE, mappings)
+
+cat("Concepts mapped for", WAVE, ":\n")
+print(wave_concepts)
+
+# Validate each concept
+cat("\n\nValidation Results:\n")
+for (i in 1:nrow(wave_concepts)) {
+  concept <- wave_concepts$concept[i]
+  validate_concept(wave_data, concept, WAVE, mappings)
+}
+```
+
+## 6. Distribution Comparison
+
+Compare distributions across a concept domain:
+
+```{r distribution-comparison}
+# Example: Trust variables
+trust_concepts <- mappings %>%
+  filter(domain == "trust") %>%
+  pull(concept)
+
+# Extract trust concepts
+trust_data <- extract_concepts(wave_data, trust_concepts, WAVE,
+                                clean = TRUE, mappings = mappings)
+
+if (!is.null(trust_data)) {
+  # Convert to long format
+  trust_long <- trust_data %>%
+    mutate(id = row_number()) %>%
+    pivot_longer(cols = -id, names_to = "concept", values_to = "value") %>%
+    filter(!is.na(value))
+
+  # Plot distributions
+  ggplot(trust_long, aes(x = as.factor(value), fill = concept)) +
+    geom_bar() +
+    facet_wrap(~concept, scales = "free_y") +
+    theme_minimal() +
+    labs(
+      title = paste("Trust Variable Distributions in", WAVE),
+      x = "Response Value (higher = more trust after harmonization)",
+      y = "Count"
+    ) +
+    theme(legend.position = "none")
+}
+```
+
+## 7. Export Findings
+
+```{r export-findings}
+# Export list of unmapped variables for concept building
+unmapped_q_vars <- q_vars %>%
+  filter(!variable %in% wave_concepts$variable)
+
+write.csv(unmapped_q_vars,
+          here(paste0("docs/", tolower(WAVE), "_unmapped_variables.csv")),
+          row.names = FALSE)
+
+cat("Unmapped variables exported to docs/", tolower(WAVE), "_unmapped_variables.csv\n", sep = "")
+cat("Total unmapped:", nrow(unmapped_q_vars), "\n")
+```
+
+## Next Steps
+
+1. **Add new NA patterns** to `na_labels_list` in `functions/cleaning_functions.R`
+2. **Map unmapped variables** to concepts in `docs/concept_mappings.csv`
+3. **Validate mappings** across waves for comparability
+4. **Repeat for other waves** by changing `params$wave` and `params$wave_file`
+
+## Usage
+
+To explore a different wave, render with different parameters:
+
+```r
+quarto::quarto_render(
+  "wave_explorer_template.qmd",
+  execute_params = list(
+    wave = "W4",
+    wave_file = "data/raw/W4_v15_merged20250609_release.sav"
+  ),
+  output_file = "wave4_explorer.html"
+)
+```
